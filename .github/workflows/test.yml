@@ -1,0 +1,95 @@
+name: CI Pipeline
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20, 22]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        if: ${{ hashFiles('package-lock.json', 'npm-shrinkwrap.json', 'yarn.lock', 'pnpm-lock.yaml') != '' }}
+        run: npm ci
+        shell: bash
+
+      - name: Install dependencies
+        if: ${{ hashFiles('package-lock.json', 'npm-shrinkwrap.json', 'yarn.lock', 'pnpm-lock.yaml') == '' }}
+        run: npm install
+        shell: bash
+
+      - name: Skip when no npm project is present
+        if: ${{ hashFiles('package-lock.json', 'npm-shrinkwrap.json', 'yarn.lock', 'pnpm-lock.yaml') == '' && hashFiles('src/**/*.ts', 'src/**/*.tsx', 'test/**/*.ts', 'tests/**/*.ts', 'src/**/*.js', 'test/**/*.js', 'tests/**/*.js') == '' }}
+        run: echo "No npm project or TypeScript sources found."
+        shell: bash
+
+      - name: Lint
+        if: ${{ hashFiles('package-lock.json', 'npm-shrinkwrap.json', 'yarn.lock', 'pnpm-lock.yaml') != '' && hashFiles('src/**/*.ts', 'src/**/*.tsx', 'test/**/*.ts', 'tests/**/*.ts', 'src/**/*.js', 'test/**/*.js', 'tests/**/*.js') != '' && hashFiles('package.json') != '' && hashFiles('eslint.config.js', 'eslint.config.mjs', '.eslintrc', '.eslintrc.js', '.eslintrc.json', '.eslintrc.yml', '.eslintrc.yaml') != '' }}
+        run: npm run lint
+        shell: bash
+
+      - name: Type check
+        if: ${{ hashFiles('package-lock.json', 'npm-shrinkwrap.json', 'yarn.lock', 'pnpm-lock.yaml') != '' && hashFiles('src/**/*.ts', 'src/**/*.tsx', 'test/**/*.ts', 'tests/**/*.ts', 'src/**/*.js', 'test/**/*.js', 'tests/**/*.js') != '' && hashFiles('package.json') != '' && hashFiles('tsconfig.json', 'tsconfig.build.json', 'tsconfig.eslint.json', 'tsconfig.eslint.mjs') != '' }}
+        run: npm run typecheck
+        shell: bash
+
+      - name: Build
+        if: ${{ hashFiles('package-lock.json', 'npm-shrinkwrap.json', 'yarn.lock', 'pnpm-lock.yaml') != '' && hashFiles('src/**/*.ts', 'src/**/*.tsx', 'test/**/*.ts', 'tests/**/*.ts', 'src/**/*.js', 'test/**/*.js', 'tests/**/*.js') != '' && hashFiles('package.json') != '' && hashFiles('tsconfig.json', 'tsconfig.build.json', 'tsconfig.eslint.json', 'tsconfig.eslint.mjs') == '' && hashFiles('vite.config.js', 'vite.config.mjs', 'webpack.config.js', 'webpack.config.cjs', 'rollup.config.js', 'rollup.config.cjs', 'jest.config.js', 'jest.config.cjs') != '' }}
+        run: npm run build
+        shell: bash
+
+      - name: Type check or build
+        if: ${{ hashFiles('package-lock.json', 'npm-shrinkwrap.json', 'yarn.lock', 'pnpm-lock.yaml') != '' && hashFiles('src/**/*.ts', 'src/**/*.tsx', 'test/**/*.ts', 'tests/**/*.ts', 'src/**/*.js', 'test/**/*.js', 'tests/**/*.js') != '' && hashFiles('package.json') != '' && (hashFiles('tsconfig.json', 'tsconfig.build.json', 'tsconfig.eslint.json', 'tsconfig.eslint.mjs') != '' || hashFiles('vite.config.js', 'vite.config.mjs', 'webpack.config.js', 'webpack.config.cjs', 'rollup.config.js', 'rollup.config.cjs', 'jest.config.js', 'jest.config.cjs') == '') }}
+        run: npm run typecheck
+        shell: bash
+
+      - name: Test
+        if: ${{ hashFiles('package-lock.json', 'npm-shrinkwrap.json', 'yarn.lock', 'pnpm-lock.yaml') != '' && hashFiles('src/**/*.ts', 'src/**/*.tsx', 'test/**/*.ts', 'tests/**/*.ts', 'src/**/*.js', 'test/**/*.js', 'tests/**/*.js') != '' && hashFiles('package.json') != '' && hashFiles('jest.config.js', 'jest.config.cjs', 'vitest.config.js', 'vitest.config.ts', 'mocha.conf.js', 'mocha.conf.cjs', 'playwright.config.js', 'playwright.config.ts', 'karma.conf.js', 'karma.conf.cjs') != '' }}
+        run: npm test
+        shell: bash
+
+      - name: Test
+        if: ${{ hashFiles('package-lock.json', 'npm-shrinkwrap.json', 'yarn.lock', 'pnpm-lock.yaml') != '' && hashFiles('src/**/*.ts', 'src/**/*.tsx', 'test/**/*.ts', 'tests/**/*.ts', 'src/**/*.js', 'test/**/*.js', 'tests/**/*.js') != '' && hashFiles('package.json') != '' && hashFiles('jest.config.js', 'jest.config.cjs', 'vitest.config.js', 'vitest.config.ts', 'mocha.conf.js', 'mocha.conf.cjs', 'playwright.config.js', 'playwright.config.ts', 'karma.conf.js', 'karma.conf.cjs') == '' && hashFiles('jest.config.js', 'jest.config.cjs', 'vitest.config.js', 'vitest.config.ts', 'mocha.conf.js', 'mocha.conf.cjs', 'playwright.config.js', 'playwright.config.ts', 'karma.conf.js', 'karma.conf.cjs') != '' }}
+        run: npm test
+        shell: bash
+
+      - name: Test
+        if: ${{ hashFiles('package-lock.json', 'npm-shrinkwrap.json', 'yarn.lock', 'pnpm-lock.yaml') != '' && hashFiles('src/**/*.ts', 'src/**/*.tsx', 'test/**/*.ts', 'tests/**/*.ts', 'src/**/*.js', 'test/**/*.js', 'tests/**/*.js') != '' && hashFiles('package.json') != '' && hashFiles('jest.config.js', 'jest.config.cjs', 'vitest.config.js', 'vitest.config.ts', 'mocha.conf.js', 'mocha.conf.cjs', 'playwright.config.js', 'playwright.config.ts', 'karma.conf.js', 'karma.conf.cjs') == '' && hashFiles('jest.config.js', 'jest.config.cjs', 'vitest.config.js', 'vitest.config.ts', 'mocha.conf.js', 'mocha.conf.cjs', 'playwright.config.js', 'playwright.config.ts', 'karma.conf.js', 'karma.conf.cjs') != '' }}
+        run: npm test
+        shell: bash
+
+      - name: Test
+        if: ${{ hashFiles('package-lock.json', 'npm-shrinkwrap.json', 'yarn.lock', 'pnpm-lock.yaml') != '' && hashFiles('src/**/*.ts', 'src/**/*.tsx', 'test/**/*.ts', 'tests/**/*.ts', 'src/**/*.js', 'test/**/*.js', 'tests/**/*.js') != '' && hashFiles('package.json') != '' && hashFiles('jest.config.js', 'jest.config.cjs', 'vitest.config.js', 'vitest.config.ts', 'mocha.conf.js', 'mocha.conf.cjs', 'playwright.config.js', 'playwright.config.ts', 'karma.conf.js', 'karma.conf.cjs') != '' }}
+        run: npm test
+        shell: bash
+
+      - name: Test
+        if: ${{ hashFiles('package-lock.json', 'npm-shrinkwrap.json', 'yarn.lock', 'pnpm-lock.yaml') != '' && hashFiles('src/**/*.ts', 'src/**/*.tsx', 'test/**/*.ts', 'tests/**/*.ts', 'src/**/*.js', 'test/**/*.js', 'tests/**/*.js') != '' && hashFiles('package.json') != '' && hashFiles('jest.config.js', 'jest.config.cjs', 'vitest.config.js', 'vitest.config.ts', 'mocha.conf.js', 'mocha.conf.cjs', 'playwright.config.js', 'playwright.config.ts', 'karma.conf.js', 'karma.conf.cjs') == '' && hashFiles('jest.config.js', 'jest.config.cjs', 'vitest.config.js', 'vitest.config.ts', 'mocha.conf.js', 'mocha.conf.cjs', 'playwright.config.js', 'playwright.config.ts', 'karma.conf.js', 'karma.conf.cjs') != '' }}
+        run: npm test
+        shell: bash
+
+      - name: Summary
+        if: ${{ always() }}
+        run: echo "Node ${{ matrix.node-version }}: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+        shell: bash
